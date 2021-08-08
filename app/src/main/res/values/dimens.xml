@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    // Margins
+    <dimen name="small_margin">8dp</dimen>
+    <dimen name="medium_margin">16dp</dimen>
+    <dimen name="big_margin">32dp</dimen>
+
+    // Paddings
+    <dimen name="small_padding">8dp</dimen>
+    <dimen name="medium_padding">16dp</dimen>
+    <dimen name="big_padding">32dp</dimen>
+
+    // Text Sizes
+    <dimen name="medium_text">16sp</dimen>
+
+    // EditText
+    <dimen name="et_width_default">160dp</dimen>
+</resources>
