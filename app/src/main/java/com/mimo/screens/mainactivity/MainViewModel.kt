@@ -5,13 +5,18 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimo.common.errors.GeneralError
+import com.mimo.data.models.CompletedLesson
+import com.mimo.data.models.Lesson
 import com.mimo.data.models.Lessons
+import com.mimo.data.repos.currentlesson.CompletedLessonsRepo
 import com.mimo.data.repos.lessons.LessonsDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.internal.wait
 
 class MainViewModel(
-    private val lessonsRepo: LessonsDataSource
+    private val lessonsRepo: LessonsDataSource,
+    private val completedLessonsRepo: CompletedLessonsRepo
 ) : ViewModel() {
 
     val lessonsLiveData: LiveData<Lessons> get() = lessonsMutableLiveData
@@ -23,6 +28,13 @@ class MainViewModel(
     private val _showProgressLiveData = MutableLiveData<Boolean>()
     val showProgressLiveData: LiveData<Boolean>
         get() = _showProgressLiveData
+
+    val completedLessonsLiveData: LiveData<List<CompletedLesson>> get() = completedLessonsMutableLiveData
+    private val completedLessonsMutableLiveData = MutableLiveData<List<CompletedLesson>>()
+
+    var inputAnswer = ""
+    var currentLessonIndex = 0
+    var currentLesson: Lesson? = null
 
     fun loadLessons() {
         showProgressBar()
@@ -43,6 +55,24 @@ class MainViewModel(
                             error
                         )
                     )
+                }
+        }
+    }
+
+    fun saveCompletedLesson(completedLesson: CompletedLesson) {
+        viewModelScope.launch(Dispatchers.IO) {
+            completedLessonsRepo.saveCompletedLesson(completedLesson)
+        }
+    }
+
+    fun getCompletedLessons() {
+        viewModelScope.launch(Dispatchers.IO) {
+            kotlin.runCatching {
+                completedLessonsRepo.getCompletedLessons()
+            }
+                .onSuccess { result ->
+                    hideProgressBar()
+                    completedLessonsMutableLiveData.postValue(result)
                 }
         }
     }

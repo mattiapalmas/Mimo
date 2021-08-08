@@ -3,4 +3,6 @@
     <string name="lessons_title_with_count">Lessons(%s/%s)</string>
     <string name="error_no_lessons_available">No lessons available.</string>
     <string name="next">Next</string>
+    <string name="error_wrong_answer">Wrong answer, try again.</string>
+    <string name="done_finished_all_lessons">Well Done! You have finished all the lessons.</string>
 </resources>

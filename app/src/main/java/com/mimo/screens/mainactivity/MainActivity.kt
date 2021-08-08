@@ -1,17 +1,23 @@
 package com.mimo.screens.mainactivity
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.contains
 import androidx.core.view.isVisible
 import com.google.android.material.snackbar.Snackbar
 import com.mimo.R
+import com.mimo.common.Constants.INPUT_ET_ID
+import com.mimo.data.models.CompletedLesson
 import com.mimo.data.models.Lesson
 import com.mimo.data.models.LessonContent
 import com.mimo.data.models.LessonInput
+import com.mimo.screens.done.DoneActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -19,12 +25,14 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 class MainActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModel()
+    private var lessonStartedAt: Long = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         observeLiveData()
+        setupNextBtnListener()
         viewModel.loadLessons()
     }
 
@@ -41,7 +49,6 @@ class MainActivity : AppCompatActivity() {
                 it.lessons.size.toString()
             )
             addLessonToLayout(it.lessons[0])
-            it.lessons
         })
 
         viewModel.showErrorLiveData.observe(this, {
@@ -51,9 +58,34 @@ class MainActivity : AppCompatActivity() {
         viewModel.showProgressLiveData.observe(this, {
             showProgressBar(it)
         })
+
+        viewModel.completedLessonsLiveData.observe(this, {
+            // Left it here in case you need to check if they are properly saved.
+            // No UI was requested for showing the completed lessons.
+        })
+    }
+
+    private fun setupNextBtnListener() {
+        nextBtn.setOnClickListener {
+            val inputEt = lessonContentFl.findViewById<EditText>(INPUT_ET_ID)
+
+            if (inputEt == null || inputEt.text.toString() == viewModel.inputAnswer) {
+                viewModel.currentLesson?.let {
+                    viewModel.saveCompletedLesson(CompletedLesson(it.id, lessonStartedAt, System.currentTimeMillis()))
+                }
+                loadNextLesson()
+            } else {
+                showSnackbar(getString(R.string.error_wrong_answer))
+            }
+        }
     }
 
     private fun addLessonToLayout(lesson: Lesson) {
+        viewModel.currentLesson = lesson
+        viewModel.currentLessonIndex++
+        lessonStartedAt = System.currentTimeMillis()
+        lessonContentFl.removeAllViews()
+
         var currentContentIndex = 0
 
         lesson.content.forEach { content ->
@@ -96,8 +128,8 @@ class MainActivity : AppCompatActivity() {
         while (remainingString.isNotBlank()) {
             if (startInputIndex == 0 && !inputFound) {
                 addEditTextToLayout()
-                //addTexViewToLayout(LessonContent(content.color, remainingString.substring(0, endInputIndex)))
-                remainingString = remainingString.substring(endInputIndex, remainingString.length )
+                viewModel.inputAnswer = remainingString.substring(0, endInputIndex)
+                remainingString = remainingString.substring(endInputIndex, remainingString.length)
                 inputFound = true
             } else {
                 var textToShow: String
@@ -130,11 +162,31 @@ class MainActivity : AppCompatActivity() {
 
     private fun addEditTextToLayout() {
         val inputEt = EditText(this)
+        inputEt.id = INPUT_ET_ID
+        inputEt.isSingleLine = true
+        inputEt.imeOptions = EditorInfo.IME_ACTION_DONE
         inputEt.layoutParams = LinearLayout.LayoutParams(
             resources.getDimension(R.dimen.et_width_default).toInt(),
             LinearLayout.LayoutParams.WRAP_CONTENT
         )
         lessonContentFl.addView(inputEt)
+    }
+
+    private fun loadNextLesson() {
+        val lessons = viewModel.lessonsLiveData.value?.lessons
+        val lessonsCount = lessons?.size ?: 0
+
+        if (viewModel.currentLessonIndex < lessonsCount && lessons != null) {
+            addLessonToLayout(lessons[viewModel.currentLessonIndex])
+        } else {
+            goToDoneScreen()
+        }
+    }
+
+    private fun goToDoneScreen() {
+        val intent = Intent(this, DoneActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        startActivity(intent)
     }
 
     private fun showSnackbar(error: String) {
